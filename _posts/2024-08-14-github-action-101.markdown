@@ -10,6 +10,10 @@ Introduction
 ---
 To use Github Action, a workflow file is required. Workflow files are located in `.github/workflows` and have extension of `.yaml` or `.yml`.
 
+Billing
+---
+Actions run on private repositories are metred. Time is rounded up to the nearest minute. There is a `2000` minutes of free usage before charge is applied. You can check how much of free minutes you have spent by going to `Settings` and then `Billing and plans`.
+
 The File
 ---
 Workflow files consist of two parts: metadata and jobs.
