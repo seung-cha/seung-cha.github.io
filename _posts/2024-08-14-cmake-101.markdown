@@ -1,0 +1,7 @@
+---
+layout: post
+title: "CMake 101"
+date: 2024-08-14 23:00 +1100
+categories: Coding
+---
+A reminder to myself to write about CMake.
