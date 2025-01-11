@@ -7,7 +7,9 @@ categories: Coding
 
 A year ago, I wrote a post about input buffering in (2D) fighting game. The solution I introduced works, but it is limited to the 2D space only (not to mention the example code is unscalable). As a fan of 2D/3D action games, I decided to make a series of posts to demonstrate how I implemented a motion-input enabled combat system.
 
-The resulting system will be similar to those you can find in various 3D action games, such as `Devil May Cry` or `Monster Hunter`. 
+The resulting system will be similar to those you can find in various 3D action games, such as `Devil May Cry` or `Monster Hunter`.
+
+This is not a how-to series. This series solely summarises my findings.
 
 Input Processing - Theory
 ---
@@ -56,8 +58,9 @@ Vector2 finalInput = new Vector2(input.x, input.z);
 // For example, to move the character:
 character.Move(character.transform.forward * finalInput.y + character.transform.right * finalInput.x);
 // Which is equivalent to:
-// character.Move(input);
+// character.Move(processedInput);
 ```
 
 The extra step of converting the world space input into the character space input allows us to gain insight on 
-what the processed input key is, as shown in the video. This allows us to implement technical motions without worrying about the camera orientation: You would write "If the player is holding back, do A move" instead of "If the player is holding X and the camera orientation is Y, do Z".
+what the processed input key would be. This allows us to implement technical motions without worrying about the camera orientation: You would write "If the player is holding back, do A move" instead of "If the player is holding X and the camera orientation is Y, do Z".
+ 
