@@ -1,0 +1,75 @@
+---
+layout: post
+title: "ROS MoveIt 101"
+date: 2025-05-25 20:30 +1100
+categories: Coding
+---
+
+My [Honours Thesis](https://github.com/seung-cha/hoil_interp.git) involves using [ROS and MoveIt to simulate and control a robot arm](https://github.com/seung-cha/hoil_interp_server.git).
+I am writing a short reference in case I forget.
+
+`MoveIt` has 3 scripting classes: `RobotCommander`, `MoveGroupCommander`, and `PlanningSceneInterface`.
+
+# RobotCommander
+
+The [RobotCommander](https://docs.ros.org/en/noetic/api/moveit_commander/html/classmoveit__commander_1_1robot_1_1RobotCommander.html) class provides information about the robot.
+
+{% highlight python %}
+
+# Assume RobotCommander is an instantiated object
+arr = RobotCommander.get_group_names() # Get an array of string
+RobotCommander.get_group(arr[]) # Get MoveGroupCommander() obj. 
+{% endhighlight %}
+
+Note that you can directly instantiate a `RobotCommander()` with a str too.
+
+# MoveGroupCommander
+
+[MoveGroupCommander](https://docs.ros.org/en/noetic/api/moveit_commander/html/classmoveit__commander_1_1move__group_1_1MoveGroupCommander.html) controls a group.  
+A group is a collection of predefined joints.
+
+{% highlight python %}
+
+# Assume MoveGroupCommander is an instantiated object
+MoveGroupCommander.set_pose_target(pose) # Set the pose of the EE but does not execute.
+success = MoveGroupCommander.go(wait= Bool)   # Execute the predefined pose target
+
+# stop residual movement
+MoveGroupCommander.stop()
+
+Pose = MoveGroupCommander.get_current_pose() # Get EE Pose
+Joints = MoveGroupCommander.get_current_joint_values() # Get an array of float
+MoveGroupCommander.go({Pose | Joints}, wait= Bool) # Execute using the Pose (or Joints) as target.
+
+{% endhighlight %}
+
+Note that the length of `get_current_joint_values()` differs for different `MoveGroupCommander`s.
+A group may not have an EE. In the case of Kinova Jaco, it has two groups: `arm` and `gripper`, and the `gripper` group has no EE.
+
+
+# PlanningSceneInterface
+
+[PlanningSceneInterface](https://docs.ros.org/en/noetic/api/moveit_commander/html/classmoveit__commander_1_1planning__scene__interface_1_1PlanningSceneInterface.html) controls the environment by adding, removing, or updating collisions.
+
+{% highlight python %}
+
+# Asssume PlanningSceneInterface is an instantiated object
+PlanningSceneInterface.add_box(str, pose, size=(x, y, z)) # Add box named str at pose
+PlanningSceneInterface.remove_world_object(str) 
+PlanningSceneInterface.remove_world_object() # equiv to .clear()
+PlanningSceneInterface.clear()
+
+
+PlanningSceneInterface.attach_box(link, str, touch_links= arr) # attach a box str at link.
+PlanningSceneInterface.attach_object(str, link= str) # More flexible
+
+PlanningSceneInterface.remove_attached_object() # Remove all attached objects
+PlanningSceneInterface.remove_attached_object(name= str) # Remove the attached object str
+
+
+{% endhighlight %}
+
+For `attach_box()` and other similar functions, it is possible to create AND attach if the optional param `pose` is given.
+Otherwise, `attach_object()` is a more flexible way to attach an existing object.
+If `touch_links` is provided (array of str), collision with the links is ignored (as per the official doc).
+Otherwise, collision with `link` is ignored.
