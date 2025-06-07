@@ -1,0 +1,142 @@
+---
+layout: post
+title: "Docker 101"
+date: 2025-06-07 15:00 +1100
+categories: Docker
+---
+
+I'm doing a course that uses Docker.
+
+# Docker
+Docker provides light-weight isolated execution environments. This is similar to VMs, but is much more lighter and each environment (`container`) shares the same kernel.
+
+# Architecture
+![architecture](/assets/2026-06-07-docker-101/architecture.png)
+
+Docker can be broken into 4 main components: Client, Daemon, Image, Container
+
+[Docker uses a client-server architecture](https://docs.docker.com/get-started/docker-overview/) whereby `Docker Client` sends REST API to `Docker Daemon`. This means that client and daemon needs not be running on the same system.
+
+`Docker Client` is what we interact with. Commands like `docker run` or `docker build` sends API requests to `Docker Daemon` to carry out the tasks. Daemon is also known as `dockerd` or `engine` (Though, it seems engine could refer to the whole client-server architecture).
+
+`Container` is an isolated execution environment. Everything inside the `container` runs independent to other `containers`, and even to the operating system.
+
+`Image` defines what a `Container` should run - Python, Node.js, etc.
+
+
+# Using Docker Client 
+
+## Managing Images
+`docker pull [tag]` fetches an image from [Docker Hub](https://hub.docker.com). This is similar to cloning a Github repo.
+
+`docker images` lists all locally-available images.
+
+`docker image rm [tag]` removes the local image.
+
+`docker image tag [tag] [new_tag]` assigns a new tag to the existing image. Removing the newly-tagged image does not delete the original image.
+
+## Running an Image
+`docker run [args] [tag] [container_args]` creates and runs the local image. By default the running container will occupy the terminal and exit as soon as the execution is done.
+
+`-d` runs the container detached, in the background.
+
+By default, Docker attaches stdout and stderr to the process. You can specify which stream to attach with `-a`:
+
+`-a stdout -a stderr -a stdin`. I don't know the use of `-a stdin` alone.
+
+You can keep the stdin open with `-i`. That is, for interactive applications, you can use the terminal to provide inputs.
+
+For applications that use ports, `-p` or `-P` maps the container's ports to the system's.
+
+`-p <in>:<out>` maps the `out` port of the container to the system's `in` port. For example: `8000:80` maps the container port 80 (HTTP) to the system port 8000. Hence, `localhost:8000` opens the web server running in the container.
+
+`-P` does this automatically, mapping to random available ports.
+
+
+## Managing Containers
+`docker container list` lists all currently-running (or paused) containers. `docker ps` is an alias to this command.
+`-a` will show all containers, including the stopped ones.
+
+The reason `-a` exists is because stopped containers can be re-run. This eliminates the need to create a new docker everytime to run an image again.
+
+`docker container remove [id]` (`docker container rm` or `docker rm`) removes the container specified by the id. To remove all stopped containers: `docker container prune`.
+
+`docker restart [id]` or `docker start [id]` to start or restart a container. `restart` is more robust in that it can be used on stopped containers too, whereas `start` doesn't work on paused containers.
+
+`docker pause [id]` `docker unpause [id]` are self-explanatory.
+
+`docker stop [id]` and `docker kill [id]` kill the container. The difference is that `stop` is graceful (SIGTERM and then SIGKILL after a while) but `kill` terminates immediately (SIGKILL)
+
+`[id]` can be replaced with name. When `docker run`, it assigns a random name along with a unique ID to the container. By using `--name str` when running an image, it will assign that name instead.
+
+You can change the name of an existing container using `docker rename [id] [str]`.
+
+
+## Dockerfile
+`Dockerfile` defines how an image should be built.  
+Use `docker build -t [name] [path]` to build an image and name it.
+
+A docker image can be created using another image as a base. This is called `image layer`.
+For example, an image can have Python3 installed on Ubuntu, and another image can be created from this image installing requirements.txt.
+
+
+
+### [Syntax](https://docs.docker.com/reference/dockerfile/)
+
+Every Dockerfile starts from a base image. `FROM` defines it. 
+
+`FROM python:3.12`: use Python:3.12 image as base image  
+`FROM scratch`: Start clean, with an empty image.
+
+base image needs to exist locally. If it doesn't, Docker will first pull it from Docker Hub.
+
+`WORKDIR` changes the current directory. This affects subsequent layers.
+
+`COPY [src] [dst]` copies from host to container
+
+`RUN` executes a shell command on the container
+
+`EXPOSE [num]/[ptcl]` tells Docker that the image uses [num] port for [ptcl] protocol. Users of this image can then run `-p` or `-P` to map those ports.
+
+`ENV <key>=<value>` self-explanatory.
+
+`CMD ["args", ...]` executes the commands upon running the image.
+
+An example Dockerfile:
+```docker
+FROM python:3.12
+WORKDIR /usr/local/app
+
+# Install the application dependencies
+COPY requirements.txt ./
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy in the source code
+COPY src ./src
+EXPOSE 5000
+
+# Setup an app user so the container doesn't run as the root user
+RUN useradd app
+USER app
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
