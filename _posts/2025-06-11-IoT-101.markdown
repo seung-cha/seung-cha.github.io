@@ -1,8 +1,8 @@
 ---
 layout: post
-title: "Arduino MicroPython 101"
+title: "IoT 101"
 date: 2025-06-07 15:00 +1100
-categories: Arduino & MicroPython
+categories: IoT
 ---
 
 COMP6733 looks like a course for 2nd year engineering students yet I'm doing it in my 4th year as an 'advanced' course. 
@@ -57,4 +57,236 @@ Functions to set pin properties:
 * `Pin.pull(pull?)`  
 ... etc
 
+# Bluetooth Low Energy
+Bluetooth Low Energy (BLE) is a Bluetooth protocol introduced in 2010 (Bluetooth 4.0) with the aim of energy efficiency.
 
+The protocol allows for low power consumption and high speed in exchange to low throughput.
+
+## [Device Modes](https://www.muyumodule.com/news/what-is-bluetooth-single-mode-bluetooth-dual-mode/)
+Single mode only implements BLE whereas dual mode implements both classical Bluetooth and BLE.
+
+# 2.4GHz
+Bluetooth operates on the frequency of 2.4GHz because it's free.
+
+# [Connection Establishment](https://novelbits.io/bluetooth-low-energy-advertisements-part-1/)
+
+## Advertising State
+a device in this state sends out advertising packets at a fixed interval `Advertising Interval`. They do so in one of the three `Primary Advertising Channels`:
+![channels](/assets/2026-06-11-IoT-101/channel.png)
+
+Each channel is separated by 2MHz. The primary channels are selected to avoid Wi-fi channels, minimising interference.
+
+TODO
+
+## Connected State
+
+TODO
+
+# [Generic Attribute Profile (GATT)](https://learn.adafruit.com/introduction-to-bluetooth-low-energy/gatt)
+GATT is an abstraction of how data is exchanged in BLE.
+
+GATT consists of `Services` and `Characteristics`.
+
+## Service
+Service is uniquely identified by a `UUID` and contains one or many `Characteristics`. It's basically a namespace for characteristics.
+
+`UUID` is a numeric field that is either 16-bits or 128-bits. 16-bits for official services and 128-bits for custom.
+
+## Characteristics
+They can send or receive data to/from central device.
+
+
+## [GATT Coding](https://github.com/micropython/micropython/tree/master/ports/nrf/modules/ubluepy)
+```python
+from ubluepy import Service, Characteristic, UUID, Peripheral, constants
+
+# Initialise and advertise bluetooth device
+peripheral = Peripheral()
+peripheral.advertise(device_name= "str", services= [])
+```
+Advertise a bluetooth device without any services
+
+To add a service, define UUID, service, and add it to the peripheral:
+
+```python
+uuid = UUID("hex")
+service = Service(uuid)
+peripheral.advertise(device_name= "str", services= [service])
+```
+
+For custom services UUID must be (with x's replaced to make it unique): `4A98xxxx-1CC4-E7C1-C757-
+F1267DD021E8`. I don't know why it's defined like that.
+
+
+# [IEEE 802.15.4](https://en.wikipedia.org/wiki/IEEE_802.15.4) (Zigbee)
+
+IEEE 802.15.4 is a IEEE standard for low-rate wireless personal area network (WPAN). It is not the same as Zigbee. Zigbee is a protocol that is built upon 802.15.4.
+
+![Layer](/assets/2026-06-11-IoT-101/layer_stack.png)
+
+
+It is similar to BLE in that it aims to provide a low-power and low-speed WPAN, typically covering 10 ~ 20m.
+
+
+## Physical Layer
+802.15.4 can operate on one of the three possible frequencies and supports a total of 27 chanenels:
+* 868MHz (one channel, 868 ~ 868.6 MHz)
+* 915MHz (10 channels, 902 ~ 928 MHz)
+* 2.4Ghz (16 channels, 2400 ~ 2480 MHz)
+
+![IEE 802.15.4 Frequencies](/assets/2026-06-11-IoT-101/802154_freq.jpg)
+
+## Classes of Devices
+802.15.4 defines two classes: `Full Function Devices (FFD)` and `Reduced Function Device (RFD)`.
+
+RFDs only implement the standards partially. As a result, they [can only talk to FFDs (one at a time), acting as leaf nodes in a network topolgy](https://www.sciencedirect.com/topics/computer-science/full-function-device).
+
+FFDs can communicate to other FFDs and RFDs. The biggest difference is that FFDs can act as a PAN coordinator.
+
+[PAN coordinators and normal coordinators are different](https://www.nxp.com/docs/en/user-guide/JN-UG-3024.pdf#page=24.09):
+In a PAN (Personal Area Network), there can only be one PAN coordinator (a.k.a principal controller of PAN). PAN coordinator governs the PAN it belongs in. Their roles include:
+* Assigning PAN ID
+* Finding network frequency
+* Short address assignment to itself
+* Whatever a normal coordinator does
+
+On the other hand, a normal coordinator is responsible for intra-PAN communication and join requests from foreign devices.
+
+
+## Network Topology
+
+### Start Topology
+PAN coordinator as centralised device. Other devices talk to each other through the PAN coordinator. Simple as that.
+
+### P2P Topology
+Nodes can talk to each other provided that they are within the communication range. Note that RFDs can talk to one FFD at a time, and therefore act as leaf nodes.
+
+## [Frame Format](https://people.iith.ac.in/tbr/teaching/docs/802.15.4-2003.pdf#page=21.77)
+Jim Kurose said that studying frame format is like eating veggies. It's good for you, but it's the least enjoyable part.
+
+### MAC Protocol Data Unit (MPDU)
+MAC frame is largely divided into three parts:
+* MAC Header (MHR) that includes `frame control`, `sequence number`, and `address info`.
+* MAC Payload
+* MAC Footer (MFR) that contains `frame check sequence`.
+
+![MPDU](/assets/2026-06-11-IoT-101/mpdu.png)
+
+Frame control is like an enum field defining the message type.
+
+![Frame Control](/assets/2026-06-11-IoT-101/frame_control.png)
+
+The `frame type` field can be one of `beacon`, `data`, `ack`, or `MAC command`.
+
+Notably, the content of MAC Payload differ depending on the frame type. (If it's `ack`, payload is empty)
+
+
+## [Medium Access Control](https://www.researchgate.net/publication/235226144_Classification_of_Usual_Protocols_over_Wireless_Sensor_Networks)
+
+802.15.4 can operate in `beacon mode` or `non-beacon mode`. In beacon mode, nodes are synchronised.
+
+# Non-beacon Mode
+It's unsynchronised and uses CSMA/CA for access control.
+
+
+## Beacon Mode
+
+
+## [Access Control](https://hal.science/hal-00250188/document#page=3.17)
+
+Communication is done in accordance to a [`superframe`](https://hal.science/hal-00250188/document#page=3.17) published by a PAN coordinator. Superframe is a time period where nodes perform synchronised communication over [`beacon internal`](https://www.researchgate.net/publication/235226144_Classification_of_Usual_Protocols_over_Wireless_Sensor_Networks) (15ms ~ 245s). 
+
+Superframe is further divided into an [active and inactive portion](https://tetcos.com/help/v13.2/Experiments-Manual/802.15.4-SuperFrame-Structure.html), where during the inactive portion the coordinator may sleep.
+
+The active portion is divided into 16 segments and further categorised into a `contention free period (CFP)` and `contention access period (CAP)`.
+
+### Contention Access Period
+CAP is the early portion of active duration (It's not necessarily the early half). During CAP, nodes transmit data using CSMA/CA (is it slotted?).
+
+### Contention Free Period
+CFP is followed instantly after CAP. During CFP, nodes explicitly ask for permission to transmit, therefore no interference occurs during communication. Timeslot in which a node is permitted to transmit data is called `guaranteed time slot (GTS)`.
+
+
+# [Taming the underlying challenges of reliable multihop routing in sensor networks](https://people.eecs.berkeley.edu/~culler/cs294-f03/papers/sensys_awoo03.pdf)
+
+
+"This study has shown that link quality estimation and
+neighborhood management are essential to and tightly coupled with reliable routing in sensor networks"
+
+## Hardware
+Berkeley Mica mote running on TinyOS.
+
+## Link Quality Observation
+
+Experiment is conducted with sensor nodes placed linearly with a spacing of 2 feet. Of those, one is selected as transmitter and tranmits 8 packets per second, 200 packets in total at a given power level.
+
+### Loss Rate Over Distance
+![Reception Probability](/assets/2026-06-11-IoT-101/tennis_court.png)
+
+There is a distance `Effective Region` within which essentially all nodes suceed communication. This distance increases with transmit power.
+
+There is also a distance `Clear Region` over which essentially all nodes fail communication.
+
+In between, `Transitional Region`, nodes exhibit expected behaviour, failing to communicate successfully with increasing distance. 
+
+However, individual nodes exhibit high variation, some failing to transmit over relatively close distance and some successfully transmitting over a large distance.
+
+### Loss Rate on Immobile Device
+![Reception Probability](/assets/2026-06-11-IoT-101/immobile.png)
+
+A node is configured to transmit 8 packets per second in an indoor setting at a distance of 15 feet for 20 minutes. Then, it is moved closer and remains stationary for the rest.
+
+The mean quality for each distance is stable, but instantaneous quality fluctuates heavily.
+
+
+Applying these concepts, we expect irregular shape of region in which nodes share similar connectivity:
+
+![Region](/assets/2026-06-11-IoT-101/region.png)
+
+## Link Estimation
+Each node assesses the quality of the link by observing packets (success and loss). protocols in the upper layers can use this metric to build routing structure.
+
+An ideal algorithm for link estimation should be simple, stable, memory efficient yet reactive to changes.
+
+link can be assessed `passively` by `snooping` (inferred by observing packets in the network) on the channel, since communication is done in a broadcasting manner. The downside is that it can't distinguish between silent nodes and nodes that fail to transmit every packet.
+
+The nature of low-power communication makes it difficult to choose a good link estimation algorithm; it must be simple as to minimise power consumption.
+
+The authors suggest an algorithm that is based on `Exponentially Weighted Moving Average (EWMA)`, namely `Window Mean With Exponentially Weighted Moving Average (WMEWMA)` with `t` and `a` for adjustable parameters.
+
+![EWMA](/assets/2026-06-11-IoT-101/ewma.png)
+
+Where `S_t` is the ratio between successful packets over all packets (successful + failed) within a timeframe `t`.
+
+![WMEWMA](/assets/2026-06-11-IoT-101/wmewma.png)
+
+
+
+## Neighbourhood Management Policy
+With limited neighbourhood table to record adjacent nodes, it is crucial to develop an algorithm that makes best use of this limited space to maintain an efficient neighbourhood set.
+
+Neighbourhood management is essentially comprised of `insertion`, `eviction`, and `reinforcement`.
+
+
+## Metric for Routing
+TODO
+
+
+
+# [6LoWPAN](https://en.wikipedia.org/wiki/6LoWPAN)
+6LoWPAN is the acronym for `IPv6 over Low-Power Personal Area Networks` and is a protocol for using IPv6 in low-power networks like IEEE 802.15.4.
+
+[IPv6 header is compressed by using information present in t802.15.4 MAC header](https://datatracker.ietf.org/doc/html/rfc4944#section-10).
+
+
+# RPL
+
+RPI is `the IP Routing Protocol designed for Low-power and lossy networks`.
+
+RPL requires nodes to form `Destination Oriented Directed Acyclic Graph (DODAG)`, which is built with ICMPv6 control messages `DIS (DODAG Info Solicitation)`, `DIO (DODAG Info Object)`, and `DAO (Destination Advertisement Object)`
+
+the DIO message is broadcast by `routers` (or `root` for a single-node graph) of the graph. Any nodes that receive this message can opt-in to participate in the graph, selecting a parent node based on an objective function. Nodes `rank` themslves when they join so that a node with a higher rank points at a node with a rank one below, thus selecting a `parent`.
+
+The resulting topology is a tree-like structure with each node pointing `up`, eventually reaching the `root`.
+
+This makes it impossible for a downward traversal, from root to leaves. `DAO` messages are sent by leaf nodes when they first join, informing parents about reachability (they call it prefix reachability and I don't know if there's a significant difference). This process terminates once the root is aware of the hierarchy.
