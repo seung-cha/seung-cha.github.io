@@ -276,7 +276,7 @@ TODO
 # [6LoWPAN](https://en.wikipedia.org/wiki/6LoWPAN)
 6LoWPAN is the acronym for `IPv6 over Low-Power Personal Area Networks` and is a protocol for using IPv6 in low-power networks like IEEE 802.15.4.
 
-[IPv6 header is compressed by using information present in t802.15.4 MAC header](https://datatracker.ietf.org/doc/html/rfc4944#section-10).
+[IPv6 header is compressed by using information present in t802.15.4 MAC header](https://datatracker.ietf.org/doc/html/rfc4944#section-10), and or using information known in the network, such as common prefix.
 
 
 # RPL
@@ -285,8 +285,53 @@ RPI is `the IP Routing Protocol designed for Low-power and lossy networks`.
 
 RPL requires nodes to form `Destination Oriented Directed Acyclic Graph (DODAG)`, which is built with ICMPv6 control messages `DIS (DODAG Info Solicitation)`, `DIO (DODAG Info Object)`, and `DAO (Destination Advertisement Object)`
 
-the DIO message is broadcast by `routers` (or `root` for a single-node graph) of the graph. Any nodes that receive this message can opt-in to participate in the graph, selecting a parent node based on an objective function. Nodes `rank` themslves when they join so that a node with a higher rank points at a node with a rank one below, thus selecting a `parent`.
+the `DIO` message is broadcast by `routers` (or `root` for a single-node graph) of the graph. Any nodes that receive this message can opt-in to participate in the graph, selecting a parent node based on an objective function. Nodes `rank` themslves when they join so that a node with a higher rank points at a node with a rank one below, thus selecting a `parent`.
 
 The resulting topology is a tree-like structure with each node pointing `up`, eventually reaching the `root`.
 
-This makes it impossible for a downward traversal, from root to leaves. `DAO` messages are sent by leaf nodes when they first join, informing parents about reachability (they call it prefix reachability and I don't know if there's a significant difference). This process terminates once the root is aware of the hierarchy.
+This makes it impossible for a downward traversal, from root to leaves. `DAO` messages are sent by leaf nodes when they first join (or when they are requested by DIO), informing parents about reachability (they call it prefix reachability and I don't know if there's a significant difference). This process terminates once the root is aware of the hierarchy. Nodes can relay `DAO` from children to its parent by aggregating its information in the `DAO` they send to the parent.
+
+## Trickler Time
+in RPL, graph-building is considered a persistent issue. As such, coordinators send `DIO` messages periodically at `trickler time` to populate the graph. This time increases as the graph becomes `stable`, reducing the number of `DIO` messages sent over time, saving energy in turn. Graph is considered `stable` if there is no `inconsistency`. `Inconsistency` is an error or change in the graph, such as loops, or joining or modifying the graph. In the case of `inconsistency`, `trickler time` resets in hope to quickly stablise the graph.
+
+
+## Storing, Non-storing mode
+
+Storing mode is the conventional table-driven forwarding method. Each node builds forwarding table with `DAO` and `DIO` messages. When a packet needs to be forwarded, nodes look at the table to determine the next hop, sending it up (towards the root) or down (towards the nodes). 
+
+In Non-storing node, only the `root` is responsible for forwarding. Children nodes of the root do not store anything in the forwarding table, minimising memory usage. Root builds downward forwarding table by receiving `DAO` messages propagating from the leaves to the root. It adds extra message in the packet so that intermediate nodes can forward it to the destination eventually.
+
+There is no blend between storing or non-storing mode; Either they are all storing, or only the root is storing.
+
+## [LPWAN](https://datatracker.ietf.org/doc/html/rfc8376#section-1)
+Short for `Low Power Wide Area Networks`. As the name suggests, it provides a wide range of cover in low-power at the cost of low-throughput.
+
+LPWAN itself is not a protocol. It is a categorisation of protocols that specialises in low-power operation and wide-range.
+
+LPWAN typically adopts one of star, star-of-stars, or mesh topology.
+
+For example, `LoRaWAN` adopts star-of-stars topology where end-devices are connected to gateways, which then are connected to the servers via IP.
+
+LPWAN maintains low-powered network by severely imposing bandwidth and `duty cycle` restrictions. `Duty cycle` is the percentage of a device's transmission time compared to when it is idle in a specific time-frame (usually a day). Duty cycle in unlicensed frequencies is regulated to ensure fair usage of shared frequencies.
+
+
+
+# [LoRaWAN](https://resources.lora-alliance.org/technical-specifications/lorawan-specification-v1-1)
+LoRaWAN is a LPWAN protocol developed by `LoRa Alliance`. Devices in LoRaWAN are classified as A, B, or C.
+
+All devices are, by default, class A. They can optionally choose to implement features in B or C (not both). Any devices implementing features other than A are called `higher Class end-devices`.
+
+## Class A: Bi-directional end-devices
+Devices in class A can communicate in bi-direction by first carrying out an uplink transmission and then waiting for any down-link transmission (two short windows for this). It is therefore the most power-efficient.
+
+Downlink transmission cannot happen randomly; It only happens following an uplink transmission from device to server.
+
+## Class B: ... with scheduled receive slots
+In addition to class A features, class B devices listen for downstream communication at scheduled times. To do so, they receive time synchronisation beacon from the gateway.
+
+## Class C: ... with maximal receive slots
+They receive downlink transmission almost continuously, only closing when transmitting. Obviously spends more power but offers far less latency.
+
+
+## End-Device Activation
+TODO
