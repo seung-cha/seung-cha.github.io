@@ -71,16 +71,10 @@ Bluetooth operates on the frequency of 2.4GHz because it's free.
 # [Connection Establishment](https://novelbits.io/bluetooth-low-energy-advertisements-part-1/)
 
 ## Advertising State
-a device in this state sends out advertising packets at a fixed interval `Advertising Interval`. They do so in one of the three `Primary Advertising Channels`:
+a device in this state sends out advertising packets at a fixed interval `Advertising Interval`. They do so in each of the three `Primary Advertising Channels`:
 ![channels](/assets/2026-06-11-IoT-101/channel.png)
 
 Each channel is separated by 2MHz. The primary channels are selected to avoid Wi-fi channels, minimising interference.
-
-TODO
-
-## Connected State
-
-TODO
 
 # [Generic Attribute Profile (GATT)](https://learn.adafruit.com/introduction-to-bluetooth-low-energy/gatt)
 GATT is an abstraction of how data is exchanged in BLE.
@@ -91,6 +85,8 @@ GATT consists of `Services` and `Characteristics`.
 Service is uniquely identified by a `UUID` and contains one or many `Characteristics`. It's basically a namespace for characteristics.
 
 `UUID` is a numeric field that is either 16-bits or 128-bits. 16-bits for official services and 128-bits for custom.
+
+Official UUIDs follow this format: `XXX...-0000-1000-8000-00805F9B34FB`.
 
 ## Characteristics
 They can send or receive data to/from central device.
@@ -256,7 +252,7 @@ The authors suggest an algorithm that is based on `Exponentially Weighted Moving
 
 ![EWMA](/assets/2026-06-11-IoT-101/ewma.png)
 
-Where `S_t` is the ratio between successful packets over all packets (successful + failed) within a timeframe `t`.
+Where `S_t` is the ratio between successful packets to all packets (successful + failed) within a timeframe `t`.
 
 ![WMEWMA](/assets/2026-06-11-IoT-101/wmewma.png)
 
@@ -269,7 +265,9 @@ Neighbourhood management is essentially comprised of `insertion`, `eviction`, an
 
 
 ## Metric for Routing
-TODO
+When it comes to wireless transmission, link quality must be taken into account. As such, routing is not as simple as choosing the fewest number of hops to reach the destination. The best-performing metric for routing in the context of wireless transmission prioritises the number of retransmissions, with each link evaluated as the inverse of forward link quality multiplied by the inverse of the backward link quality: 
+
+`1/fwd * 1/bwd`. This is found to be superior than routing metrics that prioritise the shortest path.
 
 
 
@@ -292,7 +290,7 @@ The resulting topology is a tree-like structure with each node pointing `up`, ev
 This makes it impossible for a downward traversal, from root to leaves. `DAO` messages are sent by leaf nodes when they first join (or when they are requested by DIO), informing parents about reachability (they call it prefix reachability and I don't know if there's a significant difference). This process terminates once the root is aware of the hierarchy. Nodes can relay `DAO` from children to its parent by aggregating its information in the `DAO` they send to the parent.
 
 ## Trickler Time
-in RPL, graph-building is considered a persistent issue. As such, coordinators send `DIO` messages periodically at `trickler time` to populate the graph. This time increases as the graph becomes `stable`, reducing the number of `DIO` messages sent over time, saving energy in turn. Graph is considered `stable` if there is no `inconsistency`. `Inconsistency` is an error or change in the graph, such as loops, or joining or modifying the graph. In the case of `inconsistency`, `trickler time` resets in hope to quickly stablise the graph.
+in RPL, graph-building is considered a persistent issue. As such, coordinators send `DIO` messages periodically at `trickler time` to populate the graph. This time increases as the graph becomes `stable`, reducing the number of `DIO` messages sent over time, saving energy in turn. Graph is considered `stable` if there is no `inconsistency`. `Inconsistency` is an error or change in the graph, such as loops, or joining or modifying the graph. In the case of `inconsistency`, `trickler time` resets  to quickly stablise the graph.
 
 
 ## Storing, Non-storing mode
@@ -334,4 +332,41 @@ They receive downlink transmission almost continuously, only closing when transm
 
 
 ## End-Device Activation
-TODO
+`Over the Air Activation (OTAA)` is a secure way to join a network by exchanging security data between devices and the network.
+
+Each device needs to configure `AppEUI`, `DevEUI`, and `AppKey (AES-128)`, and store them.    
+Both EUIs are public whereas the Appkey should not be exposed.
+  
+Upon joining a network, both the network and the device generates `AppSKey` and `NwkSKey` that each uses to encrypt, decrypt, and verify messages.
+
+A device in the network is assigned `DevAddr` to uniquely identify it in the network.
+
+
+`Activation by Personalisation` skips the join process entirely and manually generates `NwkSKey`, `AppSKey`, and `DevAddr` (and forwards them to the network).
+
+# CoAP
+
+CoAP stands for Constrained Application Protocol and as the name suggests, it is an application layer protocol.
+
+Unlike HTTP, it operates on top of UDP. This decision choice is to enable web transfer protocol under battery and resource constrained environments.
+
+CoAP defines `CON` and `NON` messages.  
+`CON` messages are confirmable, meaning that receiver needs to acknowledge the message, with either `ACK` for positive and `RST` for negative acknowledgement.
+
+`CON` messages are retransmitted until response arrives.
+
+
+Acknowledgement for `NON` messages is optional.
+
+CoAP supports `GET`, `POST`, `PUT`, and `DELETE` methods.
+
+
+
+# MQTT
+
+MQTT stands for Message Queueing Telemetry Transport. Unlike the name suggests, there is no message queueing mechanism.
+
+MQTT is to publish/subscribe sensor data using TCP/IP protocol. It is a lot similar to ROS.
+
+Subscriber can subscribe to more than one topic by using wildcard `+` (one level) or `#` (all level)
+
